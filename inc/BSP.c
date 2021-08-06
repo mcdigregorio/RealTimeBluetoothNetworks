@@ -2625,7 +2625,7 @@ int BSP_LightSensor_End(uint32_t *light){
 // Output: none
 void BSP_TempSensor_Init(void){
   i2cinit();
-                                   // 1) activate clock for Port A (done in i2cinit())
+ /*                                  // 1) activate clock for Port A (done in i2cinit())
                                    // allow time for clock to stabilize (done in i2cinit())
                                    // 2) no need to unlock PA2
   GPIO_PORTA_AMSEL_R &= ~0x04;     // 3) disable analog on PA2
@@ -2633,7 +2633,7 @@ void BSP_TempSensor_Init(void){
   GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R&0xFFFFF0FF)+0x00000000;
   GPIO_PORTA_DIR_R &= ~0x04;       // 5) make PA5 input
   GPIO_PORTA_AFSEL_R &= ~0x04;     // 6) disable alt funct on PA2
-  GPIO_PORTA_DEN_R |= 0x04;        // 7) enable digital I/O on PA2
+  GPIO_PORTA_DEN_R |= 0x04;        // 7) enable digital I/O on PA2*/
 }
 
 // Send the appropriate codes to initiate a
@@ -2676,12 +2676,22 @@ void static tempsensorend(uint8_t slaveAddress, int32_t *sensorV, int32_t *local
 // Assumes: BSP_TempSensor_Init() has been called
 #define TEMPINT   (*((volatile uint32_t *)0x40004010))  /* PA2 */
 int TempBusy = 0;                  // 0 = idle; 1 = measuring
+uint32_t TempStart;  //system time when temp sensort started (usec)
+uint32_t TempCalls = 0;  //number of complete temp measurements
+#define TEMPSAMPLETIME 1000000 //number of 1 usec time cycles needed to sample temp
 void BSP_TempSensor_Input(int32_t *sensorV, int32_t *localT){
   int32_t volt, temp;
   TempBusy = 1;
-  tempsensorstart(0x40);
+  /* tempsensorstart(0x40);
   while(TEMPINT == 0x04){};        // wait for conversion to complete
-  tempsensorend(0x40, &volt, &temp);
+  tempsensorend(0x40, &volt, &temp); */
+	//stand alone section
+	TempStart = BSP_Time_Get();
+	while((BSP_Time_Get() - TempStart) < TEMPSAMPLETIME){};
+	TempCalls = TempCalls	+ 1;
+	volt = TempCalls;
+	temp = TempCalls;
+	//end of stand alone section
   *sensorV = volt;
   *localT = temp;
   TempBusy = 0;
@@ -2698,7 +2708,10 @@ void BSP_TempSensor_Start(void){
   if(TempBusy == 0){
     // no measurement is in progress, so start one
     TempBusy = 1;
-    tempsensorstart(0x40);
+    //tempsensorstart(0x40);
+		//stand alone section
+		TempStart = BSP_Time_Get();
+		//end of stand alone section
   }
 }
 
@@ -2720,15 +2733,26 @@ int BSP_TempSensor_End(int32_t *sensorV, int32_t *localT){
   if(TempBusy == 0){
     // no measurement is in progress, so start one
     TempBusy = 1;
-    tempsensorstart(0x40);
+    //tempsensorstart(0x40);
+		//stand alone section
+		TempStart = BSP_Time_Get();
+		//end of stand alone section
     return 0;                      // measurement needs more time to complete
   } else{
     // measurement is in progress
-    if(TEMPINT == 0x04){
+    //if(TEMPINT == 0x04){
+		//stand alone section
+		if((BSP_Time_Get() - TempStart) < TEMPSAMPLETIME) {
+		//end of stand alone section
       return 0;                    // measurement needs more time to complete
     } else{
-      tempsensorend(0x40, &volt, &temp);
-      *sensorV = volt;
+      //tempsensorend(0x40, &volt, &temp);
+      //stand alone section
+			TempCalls = TempCalls + 1;
+			volt = TempCalls;
+			temp = TempCalls;
+			//end of standalone section
+			*sensorV = volt;
       *localT = temp;
       TempBusy = 0;
       return 1;                    // measurement is complete; pointers valid
