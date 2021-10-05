@@ -458,7 +458,7 @@ void Task7(void){
 // Task7  dummy          no timing requirement
 // Remember that you must have exactly one main() function, so
 // to work on this step, you must rename all other main()
-// functions in this file.
+// functions in this file.git
 int main(void){
   OS_Init();
   Profile_Init();  // initialize the 7 hardware profiling pins

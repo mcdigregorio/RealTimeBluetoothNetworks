@@ -162,6 +162,7 @@ void static runperiodicevents(void){
 		}
 	}
 	
+	//I think 5 iterations here is a oversight and should be 6 (or NUMTHREADS)
 	for(int i=0; i<5; i++) {
 		if(tcbs[i].sleep) {
 			tcbs[i].sleep--;
